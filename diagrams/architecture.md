@@ -1,5 +1,3 @@
-# MasjidWala TV — System Architecture
-
 flowchart TB
     %% Styling
     classDef android fill:#3DDC84,stroke:#000,color:#000
