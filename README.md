@@ -7,7 +7,6 @@
 [![Target SDK](https://img.shields.io/badge/targetSdk-34%20(Android%2014)-4CAF50?style=flat&logo=android&logoColor=white)](https://developer.android.com/about/versions/14)
 [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Android Studio](https://img.shields.io/badge/Android%20Studio-1976D2?style=flat&logo=androidstudio&logoColor=white)](https://developer.android.com/studio)
-[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white)]
 
 **A Dynasol Technologies Production**
 
