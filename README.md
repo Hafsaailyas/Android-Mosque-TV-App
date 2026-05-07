@@ -5,16 +5,12 @@
 [![API](https://img.shields.io/badge/API-REST%20%2F%20JSON-orange?style=flat&logo=json&logoColor=white)](docs/api-integration-guide.md)
 [![Min SDK](https://img.shields.io/badge/minSdk-26%20(Oreo)-lightgrey?style=flat&logo=android&logoColor=white)](https://developer.android.com/about/versions/oreo)
 [![Target SDK](https://img.shields.io/badge/targetSdk-34%20(Android%2014)-4CAF50?style=flat&logo=android&logoColor=white)](https://developer.android.com/about/versions/14)
-[![License](https://img.shields.io/badge/license-Proprietary-red?style=flat&logo=opensourceinitiative&logoColor=white)](LICENSE)
- 
 [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Android Studio](https://img.shields.io/badge/Android%20Studio-1976D2?style=flat&logo=androidstudio&logoColor=white)](https://developer.android.com/studio)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Volley](https://img.shields.io/badge/Volley-Networking-4CAF50?style=flat&logo=google&logoColor=white)](https://google.github.io/volley/)
 [![ViewPager2](https://img.shields.io/badge/ViewPager2-Slideshow-6200EE?style=flat&logo=android&logoColor=white)](https://developer.android.com/jetpack/androidx/releases/viewpager2)
-[![ZXing](https://img.shields.io/badge/ZXing-QR%20Code-FF6F00?style=flat&logo=qrcode&logoColor=white)](https://github.com/zxing/zxing)
-[![Gradle](https://img.shields.io/badge/Gradle-Build-02303A?style=flat&logo=gradle&logoColor=white)](https://gradle.org/)
-[![Maintained](https://img.shields.io/badge/maintained-yes-brightgreen?style=flat&logo=githubactions&logoColor=white)](https://github.com/dynasol/masjidwala-tv-android)
+
 **A Dynasol Technologies Production**
 
 MasjidWala TV is a professional-grade digital signage and prayer time management system built for Android TV deployments in mosques. It provides real-time prayer schedule display, dynamic media carousels, Azan/Iqamah scheduling, and full offline resilience — all managed remotely via a cloud-based administration panel.
