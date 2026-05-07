@@ -1,95 +1,85 @@
 # MasjidWala TV — System Architecture
 
-Render this diagram on [mermaid.live](https://mermaid.live) or push to GitHub — it renders natively in any `.md` file.
+flowchart TB
+    %% Styling
+    classDef android fill:#3DDC84,stroke:#000,color:#000
+    classDef ui fill:#6200EE,stroke:#000,color:#fff
+    classDef core fill:#FF9800,stroke:#000,color:#000
+    classDef data fill:#2196F3,stroke:#000,color:#fff
+    classDef storage fill:#4CAF50,stroke:#000,color:#fff
+    classDef api fill:#9E9E9E,stroke:#000,color:#fff
 
-```mermaid
-flowchart TD
-    %% ── Android OS ─────────────────────────────────────────────
-    subgraph OS["🤖 Android OS"]
-        BOOT["BootReceiver\nBroadcastReceiver"]
-        SVC["AppStartService\nForegroundService"]
+    %% Startup Layer
+    subgraph STARTUP["🚀 Startup"]
+        A[📱 BootReceiver<br/>Listens: BOOT_COMPLETED]
+        B[🚀 AppStartService<br/>Foreground + Max 3 retries]
     end
 
-    %% ── Presentation ────────────────────────────────────────────
-    subgraph PRES["🖥️ Presentation Layer"]
-        LOGIN["LoginActivity\nOTP · device registration"]
-        MAIN["MainActivity\nSync timer · lifecycle"]
-        MAINUI["MainUI ‹singleton›\nPrayer timer · DisplayObjects"]
+    %% UI Layer
+    subgraph UI["📱 UI Layer"]
+        C[🔐 LoginActivity<br/>• OTP Request<br/>• Login API Call<br/>• Spinner: Masjid/Device]
+        D[📺 MainActivity<br/>• Lifecycle mgmt<br/>• Sync Timer Loop<br/>• Boot-to-Display]
     end
 
-    %% ── Orchestration ───────────────────────────────────────────
-    subgraph ORCH["⚙️ Orchestration"]
-        GEN["GenFunc\nSync orchestration · time utils"]
+    %% Core Layer
+    subgraph CORE["⚙️ Core Layer"]
+        E[⚙️ GenFunc<br/>• syncRequest orchestration<br/>• Date/Time utilities<br/>• JSON parsing<br/>• QR generation]
+        F[🎮 MainUI Singleton<br/>• DisplayObject list<br/>• Current prayer detection<br/>• Prayer timer (1s interval)]
     end
 
-    %% ── Domain ──────────────────────────────────────────────────
-    subgraph DOM["📦 Domain Layer"]
-        S["Settings\nConfig · sync flags"]
-        PC["PerpetualCalendar\n30-day prayer times"]
-        SL["Slides\nBLOB · sequence"]
-        DO["DisplayObject\nUI binding model"]
-        PR["Prayer\nIqamah · window times"]
-        TR["Translations\nLocale strings"]
+    %% Domain Layer
+    subgraph DOMAIN["📦 Domain Layer"]
+        K1[📋 Settings<br/>Masjid · Flags · Qiyamah]
+        K2[📅 PerpetualCalendar<br/>30-day prayer times]
+        K3[🖼️ Slides<br/>BLOB · Sequence · Duration]
+        K4[🌐 Translations<br/>RTL/LTR · Urdu/English]
+        K5[🎯 DisplayObject<br/>UI binding · Prayer window]
     end
 
-    %% ── Data ────────────────────────────────────────────────────
+    %% Data Layer
     subgraph DATA["💾 Data Layer"]
-        DB["DbFunc\nSQLite CRUD"]
-        VS["VolleySingleton\nHTTP queue · auth headers"]
-        AP["AuthPreferences\nToken · layout direction"]
+        G[🌐 VolleySingleton<br/>CustomJsonObjectRequest<br/>Bearer/Basic/No Auth]
+        H[💾 DbFunc<br/>Insert · Update · Delete · Exists]
+        M[🔑 AuthPreferences<br/>SharedPreferences wrapper]
     end
 
-    %% ── Persistence ─────────────────────────────────────────────
-    subgraph SQLITE["🗄️ SQLite — masjid.wala"]
-        T1["settings\nsingle-row store"]
-        T2["namaz_times\nupsert by date PK"]
-        T3["slides\nfull replace on sync"]
+    %% Storage
+    subgraph STORAGE["🗄️ Storage"]
+        J1[(🗄️ SQLite: settings<br/>Single row config)]
+        J2[(🗄️ SQLite: namaz_times<br/>PK: date · 30 days)]
+        J3[(🗄️ SQLite: slides<br/>Full replace on sync)]
     end
 
-    %% ── Remote API ──────────────────────────────────────────────
-    subgraph API["☁️ Remote API"]
-        EP["/sync · /screen_settings\n/calendar · /slideshow\n/translation · /login · /otp"]
-    end
+    %% External
+    I[☁️ MasjidWala API<br/>/sync · /screen_settings<br/>/calendar · /slideshow<br/>/translation · /login · /otp]
 
-    %% ── Connections ─────────────────────────────────────────────
-    BOOT -->|"BOOT_COMPLETED"| SVC
-    SVC  -->|"launch after 5 s\n(max 3 retries)"| LOGIN
-    LOGIN -->|"on auth success"| MAIN
-    LOGIN -->|"OTP / login\n(NO_AUTH / BASIC_AUTH)"| VS
-    LOGIN -->|"savePreference\n(token, masjidId, layoutDir)"| AP
+    %% Connections
+    A --> B
+    B -->|Launch| C
+    C -->|Success| D
+    C --> G
+    C --> M
 
-    MAIN  -->|"syncRequest()"| GEN
-    MAIN  -->|"init(context)"| MAINUI
-    MAINUI -->|"reads settings\n& prayer times"| DB
-    MAINUI -->|"time util calls"| GEN
-    MAINUI -->|"builds list"| DO
-    DO --> PR
+    D -->|Periodic| E
+    D -->|Init| F
 
-    GEN -->|"addToRequestQueue\n(BEARER_TOKEN)"| VS
-    GEN -->|"insert / upsert"| DB
-    GEN -->|"saveTranslation"| AP
-    GEN -->|"constructs"| S & PC & SL & DO & TR
+    E --> G
+    E --> H
+    E --> K1 & K2 & K3 & K4
 
-    VS  <-->|"HTTP\n(Bearer / Basic / None)"| EP
+    F --> H
+    F --> E
+    F --> K5
 
-    DB  -->|"SQL write"| T1 & T2 & T3
-    DB  -->|"SQL read → returns"| S & PC & SL
-    AP  -->|"returns serialised JSON"| TR
+    G <--> I
+    H --> J1 & J2 & J3
+    M -.->|Provides token| G
 
-    %% ── Styles ──────────────────────────────────────────────────
-    classDef os      fill:#D3D1C7,stroke:#5F5E5A,color:#2C2C2A
-    classDef pres    fill:#CECBF6,stroke:#534AB7,color:#26215C
-    classDef orch    fill:#FAC775,stroke:#BA7517,color:#412402
-    classDef domain  fill:#9FE1CB,stroke:#0F6E56,color:#04342C
-    classDef data    fill:#F5C4B3,stroke:#993C1D,color:#4A1B0C
-    classDef db      fill:#B5D4F4,stroke:#185FA5,color:#042C53
-    classDef api     fill:#F1EFE8,stroke:#888780,color:#2C2C2A
-
-    class BOOT,SVC os
-    class LOGIN,MAIN,MAINUI pres
-    class GEN orch
-    class S,PC,SL,DO,PR,TR domain
-    class DB,VS,AP data
-    class T1,T2,T3 db
-    class EP api
-```
+    %% Styles
+    class A,B android
+    class C,D ui
+    class E,F core
+    class K1,K2,K3,K4,K5 data
+    class G,H,M storage
+    class I api
+    class J1,J2,J3 storage
