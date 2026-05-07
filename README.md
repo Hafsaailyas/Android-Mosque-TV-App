@@ -180,4 +180,3 @@ masjidwala-tv-android/
 
 ---
 
-*© Dynasol Technologies. All Rights Reserved.*
