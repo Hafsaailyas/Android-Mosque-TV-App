@@ -1,123 +1,95 @@
+# MasjidWala TV — System Architecture
+
+Render this diagram on [mermaid.live](https://mermaid.live) or push to GitHub — it renders natively in any `.md` file.
+
 ```mermaid
-graph TB
-    %% ============================================================
-    %% MasjidWala TV — Component Architecture Diagram
-    %% Renders natively on GitHub in any Markdown file
-    %% ============================================================
-
-    %% ── External ────────────────────────────────────────────────
-    subgraph REMOTE["☁️ MasjidWala Backend API"]
-        API_SYNC["/sync"]
-        API_SETTINGS["/screen_settings"]
-        API_CALENDAR["/calendar"]
-        API_SLIDES["/slideshow"]
-        API_TRANS["/translation"]
-        API_LOGIN["/login + /otp"]
-    end
-
-    %% ── Android OS ──────────────────────────────────────────────
-    subgraph OS["🤖 Android OS Layer"]
-        BOOT["BootReceiver\n«BroadcastReceiver»"]
-        SERVICE["AppStartService\n«ForegroundService»"]
+flowchart TD
+    %% ── Android OS ─────────────────────────────────────────────
+    subgraph OS["🤖 Android OS"]
+        BOOT["BootReceiver\nBroadcastReceiver"]
+        SVC["AppStartService\nForegroundService"]
     end
 
     %% ── Presentation ────────────────────────────────────────────
-    subgraph PRESENTATION["🖥️ Presentation Layer"]
-        LOGIN["LoginActivity"]
-        MAIN["MainActivity"]
-        MAINUI["MainUI\n«Singleton»"]
-        CAROUSEL["CarouselAdapter\n«RecyclerView.Adapter»"]
-        PROGRESS["ProgressBarHandler"]
+    subgraph PRES["🖥️ Presentation Layer"]
+        LOGIN["LoginActivity\nOTP · device registration"]
+        MAIN["MainActivity\nSync timer · lifecycle"]
+        MAINUI["MainUI ‹singleton›\nPrayer timer · DisplayObjects"]
     end
 
     %% ── Orchestration ───────────────────────────────────────────
     subgraph ORCH["⚙️ Orchestration"]
-        GENFUNC["GenFunc\n(Sync + Time Utils)"]
+        GEN["GenFunc\nSync orchestration · time utils"]
     end
 
     %% ── Domain ──────────────────────────────────────────────────
-    subgraph DOMAIN["📦 Domain Layer"]
-        SETTINGS["Settings"]
-        CALENDAR_OBJ["PerpetualCalendar"]
-        PRAYER["Prayer"]
-        DISPOBJ["DisplayObject"]
-        SLIDES_OBJ["Slides"]
-        TRANS_OBJ["Translations"]
+    subgraph DOM["📦 Domain Layer"]
+        S["Settings\nConfig · sync flags"]
+        PC["PerpetualCalendar\n30-day prayer times"]
+        SL["Slides\nBLOB · sequence"]
+        DO["DisplayObject\nUI binding model"]
+        PR["Prayer\nIqamah · window times"]
+        TR["Translations\nLocale strings"]
     end
 
     %% ── Data ────────────────────────────────────────────────────
     subgraph DATA["💾 Data Layer"]
-        DBFUNC["DbFunc\n(CRUD Operations)"]
-        VOLLEY["VolleySingleton\n(HTTP Queue)"]
-        AUTHPREFS["AuthPreferences\n(SharedPreferences)"]
+        DB["DbFunc\nSQLite CRUD"]
+        VS["VolleySingleton\nHTTP queue · auth headers"]
+        AP["AuthPreferences\nToken · layout direction"]
     end
 
     %% ── Persistence ─────────────────────────────────────────────
-    subgraph DB["🗄️ SQLite — masjid.wala"]
-        TBL_SETTINGS["TABLE: settings\n(single-row)"]
-        TBL_NAMAZ["TABLE: namaz_times\n(upsert by date)"]
-        TBL_SLIDES["TABLE: slides\n(full replace on sync)"]
+    subgraph SQLITE["🗄️ SQLite — masjid.wala"]
+        T1["settings\nsingle-row store"]
+        T2["namaz_times\nupsert by date PK"]
+        T3["slides\nfull replace on sync"]
     end
 
-    %% ── Boot Flow ───────────────────────────────────────────────
-    BOOT -->|"BOOT_COMPLETED"| SERVICE
-    SERVICE -->|"launch after 5s\n(max 3 retries)"| LOGIN
+    %% ── Remote API ──────────────────────────────────────────────
+    subgraph API["☁️ Remote API"]
+        EP["/sync · /screen_settings\n/calendar · /slideshow\n/translation · /login · /otp"]
+    end
 
-    %% ── Auth Flow ───────────────────────────────────────────────
-    LOGIN -->|"OTP / Login requests"| VOLLEY
-    VOLLEY -->|"HTTP NO_AUTH / BASIC_AUTH"| API_LOGIN
-    LOGIN -->|"savePreference\n(token, masjidId, layoutDir)"| AUTHPREFS
-    LOGIN -->|"startActivity on success"| MAIN
+    %% ── Connections ─────────────────────────────────────────────
+    BOOT -->|"BOOT_COMPLETED"| SVC
+    SVC  -->|"launch after 5 s\n(max 3 retries)"| LOGIN
+    LOGIN -->|"on auth success"| MAIN
+    LOGIN -->|"OTP / login\n(NO_AUTH / BASIC_AUTH)"| VS
+    LOGIN -->|"savePreference\n(token, masjidId, layoutDir)"| AP
 
-    %% ── Sync Flow ───────────────────────────────────────────────
-    MAIN -->|"syncRequest()"| GENFUNC
-    GENFUNC -->|"addToRequestQueue()"| VOLLEY
-    VOLLEY -->|"HTTP BEARER_TOKEN"| API_SYNC
-    VOLLEY -->|"HTTP BEARER_TOKEN"| API_SETTINGS
-    VOLLEY -->|"HTTP BEARER_TOKEN"| API_CALENDAR
-    VOLLEY -->|"HTTP BEARER_TOKEN"| API_SLIDES
-    VOLLEY -->|"HTTP BEARER_TOKEN"| API_TRANS
-    GENFUNC -->|"insert / upsert"| DBFUNC
-    GENFUNC -->|"saveTranslationPreference()"| AUTHPREFS
+    MAIN  -->|"syncRequest()"| GEN
+    MAIN  -->|"init(context)"| MAINUI
+    MAINUI -->|"reads settings\n& prayer times"| DB
+    MAINUI -->|"time util calls"| GEN
+    MAINUI -->|"builds list"| DO
+    DO --> PR
 
-    %% ── DB Persistence ──────────────────────────────────────────
-    DBFUNC -->|"SQL read / write"| TBL_SETTINGS
-    DBFUNC -->|"SQL read / write"| TBL_NAMAZ
-    DBFUNC -->|"SQL read / write"| TBL_SLIDES
+    GEN -->|"addToRequestQueue\n(BEARER_TOKEN)"| VS
+    GEN -->|"insert / upsert"| DB
+    GEN -->|"saveTranslation"| AP
+    GEN -->|"constructs"| S & PC & SL & DO & TR
 
-    %% ── UI Flow ─────────────────────────────────────────────────
-    MAIN -->|"init(context)"| MAINUI
-    MAINUI -->|"getSettings()\ngetPerpetualCalendar()"| DBFUNC
-    MAINUI -->|"time utility calls"| GENFUNC
-    MAINUI -->|"builds List«DisplayObject»"| DISPOBJ
-    DISPOBJ -->|"contains (nullable)"| PRAYER
-    MAINUI -->|"updateTextViews()"| MAIN
-    MAIN -->|"submitList(slides)"| CAROUSEL
-    CAROUSEL -->|"getSlides()"| DBFUNC
-    CAROUSEL -->|"renders BLOB as Bitmap"| SLIDES_OBJ
-    MAIN -->|"startProgressBar(duration)"| PROGRESS
+    VS  <-->|"HTTP\n(Bearer / Basic / None)"| EP
 
-    %% ── Domain ↔ Data ───────────────────────────────────────────
-    DBFUNC -->|"returns"| SETTINGS
-    DBFUNC -->|"returns"| CALENDAR_OBJ
-    DBFUNC -->|"returns"| SLIDES_OBJ
-    AUTHPREFS -->|"returns serialised JSON"| TRANS_OBJ
-    GENFUNC -->|"parses + constructs"| TRANS_OBJ
+    DB  -->|"SQL write"| T1 & T2 & T3
+    DB  -->|"SQL read → returns"| S & PC & SL
+    AP  -->|"returns serialised JSON"| TR
 
-    %% ── Styling ─────────────────────────────────────────────────
-    classDef remote    fill:#D6EAF8,stroke:#2E86C1,color:#1A252F
-    classDef os        fill:#D5F5E3,stroke:#27AE60,color:#1A252F
-    classDef present   fill:#EAF4FB,stroke:#2980B9,color:#1A252F
-    classDef orch      fill:#FEF9E7,stroke:#F39C12,color:#1A252F
-    classDef domain    fill:#F9EBEA,stroke:#C0392B,color:#1A252F
-    classDef data      fill:#F4ECF7,stroke:#8E44AD,color:#1A252F
-    classDef db        fill:#FDFEFE,stroke:#717D7E,color:#1A252F
+    %% ── Styles ──────────────────────────────────────────────────
+    classDef os      fill:#D3D1C7,stroke:#5F5E5A,color:#2C2C2A
+    classDef pres    fill:#CECBF6,stroke:#534AB7,color:#26215C
+    classDef orch    fill:#FAC775,stroke:#BA7517,color:#412402
+    classDef domain  fill:#9FE1CB,stroke:#0F6E56,color:#04342C
+    classDef data    fill:#F5C4B3,stroke:#993C1D,color:#4A1B0C
+    classDef db      fill:#B5D4F4,stroke:#185FA5,color:#042C53
+    classDef api     fill:#F1EFE8,stroke:#888780,color:#2C2C2A
 
-    class API_SYNC,API_SETTINGS,API_CALENDAR,API_SLIDES,API_TRANS,API_LOGIN remote
-    class BOOT,SERVICE os
-    class LOGIN,MAIN,MAINUI,CAROUSEL,PROGRESS present
-    class GENFUNC orch
-    class SETTINGS,CALENDAR_OBJ,PRAYER,DISPOBJ,SLIDES_OBJ,TRANS_OBJ domain
-    class DBFUNC,VOLLEY,AUTHPREFS data
-    class TBL_SETTINGS,TBL_NAMAZ,TBL_SLIDES db
+    class BOOT,SVC os
+    class LOGIN,MAIN,MAINUI pres
+    class GEN orch
+    class S,PC,SL,DO,PR,TR domain
+    class DB,VS,AP data
+    class T1,T2,T3 db
+    class EP api
 ```
